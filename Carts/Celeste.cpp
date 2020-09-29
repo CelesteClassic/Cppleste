@@ -538,8 +538,8 @@ Celeste::key::key(PICO8<Celeste> &p8, Celeste &g, int x, int y, int tile) : base
 
 void Celeste::key::update() {
     if (collide<player>(0,0)){
-        g.destroy_object(this);
         g.has_key=true;
+        g.destroy_object(this);
     }
 }
 
