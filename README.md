@@ -585,7 +585,8 @@ It manages to find several 45 frame solutions, which are 66 frame solutions when
 
 Comparing the performance of Pyleste to Cppleste on this search, we get a significant improvement: this search runs in ~1000 seconds on pyleste, whereas cppleste compiled with optimizations runs it in just below 6 seconds, giving a x167 improvement. While not all searches will get a speedup as large, it's safe to say Cppleste is much faster than Pyleste
 
-#Running Cppleste
+# Running Cppleste
+
 While you can just compile every script using cppleste that you write with all of the Cppleste files, it is recommended to use Cppleste as a statically linked library, both for ease of use and better compile times.
 If you want to compile the library yourself I'll explain how to do that with CMake:
 
