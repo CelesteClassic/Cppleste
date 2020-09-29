@@ -597,7 +597,7 @@ cmake ../
 cmake --build .
 ``` 
 This will create a file called libCppleste.a which is the statically linked library.
-now to compile a file using the Cppleste library (say cpplesteTest.cpp) simply put it and libCppleste.a in the same folder, and run
+now to compile a file using the Cppleste library (say cpplesteTest.cpp) simply put it, libCppleste.a and all of the header files in the same folder, and run
 ```
 g++ -std=c++17 libCppleste.a cpplesteTest.cpp -o outputName
 ```
