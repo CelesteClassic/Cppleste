@@ -583,11 +583,11 @@ It manages to find several 45 frame solutions, which are 66 frame solutions when
 
 <img src="https://i.imgur.com/eT4pHtK.gif">
 
-Comparing the performance of Pyleste to Cppleste on this search, we get a significant improvement: this search runs in ~1000 seconds on pyleste, whereas cppleste compiled with optimizations runs it in just below 6 seconds, giving a x167 improvement. While not all searches will get a speedup as large, it's safe to say Cppleste is much faster than Pyleste
+Comparing the performance of Pyleste to Cppleste on this search, we get a significant improvement: this search runs in ~1000 seconds on Pyleste, whereas Cppleste compiled with optimizations runs it in just below 6 seconds, giving a x167 improvement. While not all searches will get a speedup as large, it's safe to say Cppleste is much faster than Pyleste
 
 # Running Cppleste
 
-While you can just compile every script using cppleste that you write with all of the Cppleste files, it is recommended to use Cppleste as a statically linked library, both for ease of use and better compile times.
+While you can just compile every script using Cppleste that you write with all of the Cppleste files, it is recommended to use Cppleste as a statically linked library, both for ease of use and better compile times.
 If you want to compile the library yourself I'll explain how to do that with CMake:
 
 in your Cppleste directory create some subdirectory (say cppleste-build)
@@ -597,11 +597,12 @@ cmake ../
 cmake --build .
 ``` 
 This will create a file called libCppleste.a which is the statically linked library.
-now to compile a file using the cppleste library (say cpplesteTest.cpp) simply put it and libCppleste.a in the same folder, and run
+now to compile a file using the Cppleste library (say cpplesteTest.cpp) simply put it and libCppleste.a in the same folder, and run
 ```
 g++ -std=c++17 libCppleste.a cpplesteTest.cpp -o outputName
 ```
 It is also recommended you add the -O3 flag for files where performance is important.
 
-#Thanks 
-thanks to meep for originally making pyleste, helping with understanding the code and implementation details, and allowing me to shamelessly steal his examples.
+# Thanks 
+
+thanks to meep for originally making Pyleste, helping with understanding the code and implementation details, and allowing me to shamelessly steal his examples.
