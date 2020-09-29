@@ -40,7 +40,7 @@ public:
         if (can_jump) {
             actions.insert(actions.end(), {0b010000});
             if (h_movement) {
-                actions.insert(actions.end(), {0b010000, 0b010001, 0b010010});
+                actions.insert(actions.end(), {0b010001, 0b010010});
             }
         }
         if (can_dash) {
