@@ -27,7 +27,7 @@ class Search2100: public Searcheline<>{
         return actions;
     }
     //from the input restrictions, we won't exit off of a dash- the max y displacement is 4 px off the spring
-    int exit_heuristic(const Celeste::player& player) {
+    int exit_heuristic(const Celeste::player& player) override {
         int exit_spd_y=4;
         return ceil((player.y + 4) / exit_spd_y);
     }
