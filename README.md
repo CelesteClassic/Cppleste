@@ -6,7 +6,7 @@
   * [Example - 100m](#example---100m)
 * [Running Cppleste](#running-cppleste)
 # Cppleste
-Performance focused C++ Celeste Classic emulator based on [Pyleste](https://github.com/CelesteClassic/Pyleste). Comes with useful utils (CelesteUtils.py) for setting up and simulating specific situations in both existing and custom-specified levels.
+Performance focused C++ Celeste Classic emulator based on [Pyleste](https://github.com/CelesteClassic/Pyleste). Comes with useful utils (CelesteUtils.h) for setting up and simulating specific situations in both existing and custom-specified levels.
 
 ## Sample Usage
 ```C++
