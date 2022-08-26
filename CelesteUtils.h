@@ -11,6 +11,8 @@
 #include <iostream>
 #include <chrono>
 #include <thread>
+#include <vector>
+
 namespace utils {
     template<typename Cart>
     void enable_loop_mode(PICO8<Cart> &p8){
