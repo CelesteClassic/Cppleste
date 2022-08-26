@@ -20,7 +20,8 @@ Celeste::base_obj::base_obj(PICO8<Celeste> &p8, Celeste &g, int x, int y, int ti
         solids(false),
         collideable(true),
         ascii("  "),
-        type ("obj") {}
+        type ("obj"),
+        type_id(BASE_OBJ){}
 
 void Celeste::base_obj::init() {}
 
@@ -104,6 +105,7 @@ std::ostream &operator<<(std::ostream &os, const Celeste::base_obj &b) {
 Celeste::player_spawn::player_spawn(PICO8<Celeste> &p8, Celeste &g, int x, int y, int tile) : base_obj(p8, g, x, y, tile) {
     ascii = ":D";
     type = "player spawn";
+    type_id = PLAYER_SPAWN;
 }
 
 void Celeste::player_spawn::init() {
@@ -152,6 +154,7 @@ Celeste::player_spawn *Celeste::player_spawn::clone() const {
 Celeste::player::player(PICO8<Celeste> &p8, Celeste &g, int x, int y, int tile) : base_obj(p8, g, x, y, tile) {
     ascii = ":D";
     type = "player";
+    type_id = PLAYER;
 }
 
 void Celeste::player::init() {
@@ -276,6 +279,7 @@ Celeste::player *Celeste::player::clone() const {
 Celeste::balloon::balloon(PICO8<Celeste> &p8, Celeste &g, int x, int y, int tile) : base_obj(p8, g, x, y, tile) {
     ascii="()";
     type="balloon";
+    type_id=BALLOON;
 }
 
 void Celeste::balloon::init() {
@@ -308,6 +312,7 @@ Celeste::balloon *Celeste::balloon::clone() const {
 Celeste::platform::platform(PICO8<Celeste> &p8, Celeste &g, int x, int y, int tile) : base_obj(p8, g, x, y, tile) {
     ascii = "oo";
     type = "platform";
+    type_id=PLATFORM;
 }
 
 void Celeste::platform::init() {
@@ -341,6 +346,7 @@ Celeste::platform *Celeste::platform::clone() const {
 Celeste::fruit::fruit(PICO8<Celeste> &p8, Celeste &g, int x, int y, int tile) : base_obj(p8, g, x, y, tile) {
     ascii="{}";
     type = "fruit";
+    type_id=FRUIT;
 }
 
 void Celeste::fruit::init() {
@@ -367,6 +373,7 @@ Celeste::fruit *Celeste::fruit::clone() const {
 Celeste::fly_fruit::fly_fruit(PICO8<Celeste> &p8, Celeste &g, int x, int y, int tile) : base_obj(p8, g, x, y, tile) {
     ascii="{}";
     type = "fly fruit";
+    type_id=FLY_FRUIT;
 }
 
 void Celeste::fly_fruit::init() {
@@ -404,6 +411,7 @@ Celeste::fly_fruit *Celeste::fly_fruit::clone() const {
 Celeste::fake_wall::fake_wall(PICO8<Celeste> &p8, Celeste &g, int x, int y, int tile) : base_obj(p8, g, x, y, tile) {
     ascii="▓▓";
     type= "fake wall";
+    type_id=FAKE_WALL;
 }
 
 void Celeste::fake_wall::update() {
@@ -430,6 +438,7 @@ Celeste::fake_wall *Celeste::fake_wall::clone() const {
 Celeste::spring::spring(PICO8<Celeste> &p8, Celeste &g, int x, int y, int tile) : base_obj(p8, g, x, y, tile) {
     ascii="ΞΞ";
     type = "spring";
+    type_id = SPRING;
 }
 
 void Celeste::spring::init() {
@@ -481,6 +490,7 @@ Celeste::spring *Celeste::spring::clone() const {
 Celeste::fall_floor::fall_floor(PICO8<Celeste> &p8, Celeste &g, int x, int y, int tile) : base_obj(p8, g, x, y, tile) {
     ascii = "▒▒";
     type = "fall floor";
+    type_id = FALL_FLOOR;
 }
 
 void Celeste::fall_floor::init() {
@@ -534,6 +544,7 @@ void Celeste::break_fall_floor(Celeste::fall_floor &s) {
 Celeste::key::key(PICO8<Celeste> &p8, Celeste &g, int x, int y, int tile) : base_obj(p8, g, x, y, tile) {
     ascii="¤¬";
     type = "key";
+    type_id = KEY;
 }
 
 void Celeste::key::update() {
@@ -551,6 +562,7 @@ Celeste::key *Celeste::key::clone() const {
 Celeste::chest::chest(PICO8<Celeste> &p8, Celeste &g, int x, int y, int tile) : base_obj(p8, g, x, y, tile) {
     ascii="╔╗";
     type= "chest";
+    type_id = CHEST;
 }
 
 void Celeste::chest::init() {
@@ -734,7 +746,7 @@ void Celeste::kill_player(Celeste::player *p) {
 
 Celeste::base_obj *Celeste::get_player() {
     for (auto &o: objects) {
-        if (dynamic_cast<Celeste::player *>(o.get()) != nullptr || dynamic_cast<Celeste::player_spawn *>(o.get())) {
+        if (o->type_id == Celeste::PLAYER  || o->type_id == Celeste::PLAYER_SPAWN ) {
             return o.get();
         }
     }
@@ -828,14 +840,14 @@ std::ostream &operator<<(std::ostream &os, Celeste &c) {
         int pos = ox + 17 * oy;
         if(ox>=0&& ox<=15&&oy>=0&&oy<=15) {
             map_str[pos] = o->ascii;
-            if(dynamic_cast<Celeste::platform*>(o.get())!=nullptr&&ox+1<=15){
+            if(o->type_id==Celeste::PLATFORM&&ox+1<=15){
                 map_str[pos+1]=o->ascii;
             }
-            else if(dynamic_cast<Celeste::fly_fruit*>(o.get())!=nullptr){
+            else if(o->type_id==Celeste::FLY_FRUIT){
                 if(ox-1>=0) map_str[pos-1]=" »";
                 if(ox+1<=15) map_str[pos+1]="« ";
             }
-            else if(dynamic_cast<Celeste::fake_wall*>(o.get())!= nullptr){
+            else if(o->type_id==Celeste::FAKE_WALL){
                 if (ox + 1 <= 15) map_str[pos + 1] = o->ascii;
                 if (oy + 1 <= 15) map_str[pos + 17] = o->ascii;
                 if (ox + 1 <= 15 && oy + 1 <= 15) map_str[pos + 18] = o->ascii;

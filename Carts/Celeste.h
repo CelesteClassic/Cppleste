@@ -13,6 +13,7 @@
 #include "../PICO8.h"
 
 struct Celeste{
+    enum ObjType {BASE_OBJ=-1, PLAYER_SPAWN, PLAYER, BALLOON, PLATFORM, FRUIT, FLY_FRUIT, FAKE_WALL, SPRING, FALL_FLOOR, KEY, CHEST};
     struct Pair {
         double x;
         double y;
@@ -27,6 +28,7 @@ struct Celeste{
         Rect(int x, int y, int h, int w);
     };
     struct base_obj{
+        const static ObjType type_enum=BASE_OBJ;
         double x;
         double y;
         bool collideable;
@@ -35,6 +37,7 @@ struct Celeste{
         std::string ascii;
         std::string type;
         Pair flip;
+        ObjType type_id;
         Rect hitbox;
         Pair spd;
         Pair rem;
@@ -51,7 +54,7 @@ struct Celeste{
         template<typename obj>
         obj* check(int ox, int oy) const{
             for (auto &other: g.objects) {
-                if (dynamic_cast<obj *>(other.get()) != nullptr && other.get() != this && other->collideable &&
+                if (other!=nullptr && other-> type_id == obj::type_enum && other.get() != this && other->collideable &&
                     other->x + other->hitbox.x + other->hitbox.w > x + hitbox.x + ox &&
                     other->y + other->hitbox.y + other->hitbox.h > y + hitbox.y + oy &&
                     other->x + other->hitbox.x < x + hitbox.x + hitbox.w + ox &&
@@ -74,6 +77,7 @@ struct Celeste{
     };
 
     struct player_spawn : public base_obj{
+        const static ObjType type_enum=PLAYER_SPAWN;
         int target;
         int state;
         int delay;
@@ -84,6 +88,7 @@ struct Celeste{
 
     };
     struct player : public base_obj{
+        const static ObjType type_enum=PLAYER;
         bool p_jump;
         bool p_dash;
         int grace;
@@ -101,6 +106,7 @@ struct Celeste{
 
     };
     struct balloon : public base_obj{
+        const static ObjType type_enum=BALLOON;
         int timer;
         balloon(PICO8<Celeste> &p8, Celeste &g, int x, int y, int tile=-1);
         void init() override;
@@ -108,6 +114,7 @@ struct Celeste{
         balloon* clone() const override;
     };
     struct platform : public base_obj{
+        const static ObjType type_enum=PLATFORM;
         double last;
         int dir;
         platform(PICO8<Celeste> &p8, Celeste &g, int x, int y, int tile=-1);
@@ -116,6 +123,7 @@ struct Celeste{
         platform* clone() const override;
     };
     struct fruit : public base_obj{
+        const static ObjType type_enum=FRUIT;
         double start;
         int off;
         fruit(PICO8<Celeste> &p8, Celeste &g, int x, int y, int tile=-1);
@@ -124,6 +132,7 @@ struct Celeste{
         fruit* clone() const override;
     };
     struct fly_fruit : public base_obj{
+        const static ObjType type_enum=FLY_FRUIT;
         bool fly;
         double step;
         bool solids;
@@ -133,11 +142,13 @@ struct Celeste{
         fly_fruit* clone() const override;
     };
     struct fake_wall : public base_obj{
+        const static ObjType type_enum=FAKE_WALL;
         fake_wall(PICO8<Celeste> &p8, Celeste &g, int x, int y, int tile=-1);
         void update() override;
         fake_wall* clone() const override;
     };
     struct spring : public base_obj{
+        const static ObjType type_enum=SPRING;
         int hide_for;
         int hide_in;
         int delay;
@@ -147,6 +158,7 @@ struct Celeste{
         spring* clone() const override;
     };
     struct fall_floor: public base_obj{
+        const static ObjType type_enum=FALL_FLOOR;
         int state;
         int delay;
         fall_floor(PICO8<Celeste> &p8, Celeste &g, int x, int y, int tile=-1);
@@ -157,11 +169,13 @@ struct Celeste{
     static void break_spring(spring& s);
     static void break_fall_floor(fall_floor& s);
     struct key : public base_obj{
+        const static ObjType type_enum=KEY;
         key(PICO8<Celeste> &p8, Celeste &g, int x, int y, int tile=-1);
         void update() override;
         key* clone() const override;
     };
     struct chest : public base_obj{
+        const static ObjType type_enum=CHEST;
         int timer;
         chest(PICO8<Celeste> &p8, Celeste &g, int x, int y, int tile=-1);
         void init() override;
