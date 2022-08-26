@@ -24,7 +24,7 @@ struct Celeste{
         int y;
         int h;
         int w;
-        Rect(int x, int y, int h, int w);
+        Rect(int x, int y, int w, int h);
     };
     struct base_obj{
         double x;
