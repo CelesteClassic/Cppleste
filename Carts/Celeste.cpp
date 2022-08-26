@@ -3,7 +3,9 @@ using std::abs;
 using std::min;
 using std::max;
 
-Celeste::Pair::Pair(double x, double y) : x(x), y(y) {}
+
+template<typename T>
+Celeste::Pair<T>::Pair(T x, T y) : x(x), y(y) {}
 
 Celeste::Rect::Rect(int x, int y, int w, int h) : x(x), y(y), h(h), w(w) {}
 
@@ -132,7 +134,7 @@ void Celeste::player_spawn::update() {
             }
             else if (y > target) {
                 y = target;
-                spd = Pair(0, 0);
+                spd = Pair<double>(0, 0);
                 state = 2;
                 delay = 5;
             }
@@ -165,8 +167,8 @@ void Celeste::player::init() {
     djump = 1;
     dash_time = 0;
     dash_effect_time = 0;
-    dash_target = Pair(0, 0);
-    dash_accel = Pair(0, 0);
+    dash_target = Pair<double>(0, 0);
+    dash_accel = Pair<double>(0, 0);
     hitbox = Rect(1, 3, 6, 5);
     solids = true;
 }
@@ -671,7 +673,7 @@ void Celeste::next_room() {
     if (loop_mode) {
         return;
     }
-    room = Pair((level_index() + 1) % 8, (level_index() + 1) / 8);
+    room = Pair<int>((level_index() + 1) % 8, (level_index() + 1) / 8);
 }
 
 void Celeste::load_room(int x, int y) {

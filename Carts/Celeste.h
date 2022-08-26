@@ -14,10 +14,11 @@
 
 struct Celeste{
     enum ObjType {BASE_OBJ=-1, PLAYER_SPAWN, PLAYER, BALLOON, PLATFORM, FRUIT, FLY_FRUIT, FAKE_WALL, SPRING, FALL_FLOOR, KEY, CHEST};
+    template<typename T>
     struct Pair {
-        double x;
-        double y;
-        Pair(double x, double y);
+        T x;
+        T y;
+        Pair(T x, T y);
         Pair()=default;
     };
     struct Rect{
@@ -36,11 +37,11 @@ struct Celeste{
         int spr;
         std::string ascii;
         std::string type;
-        Pair flip;
         ObjType type_id;
+        Pair<bool> flip;
         Rect hitbox;
-        Pair spd;
-        Pair rem;
+        Pair<double> spd;
+        Pair<double> rem;
         Celeste &g;
         PICO8<Celeste>& p8;
         base_obj(PICO8<Celeste> &p8, Celeste &g, int x, int y, int tile=-1);
@@ -96,8 +97,8 @@ struct Celeste{
         int djump;
         int dash_time;
         int dash_effect_time;
-        Pair dash_target;
-        Pair dash_accel;
+        Pair<double> dash_target;
+        Pair<double> dash_accel;
         player(PICO8<Celeste> &p8, Celeste &g, int x, int y, int tile=-1);
         void init() override;
         void update() override;
@@ -183,7 +184,7 @@ struct Celeste{
         chest* clone() const override;
     };
     PICO8<Celeste>& p8;
-    Pair room;
+    Pair<int> room;
     std::list<std::unique_ptr<base_obj>> objects;
     int freeze;
     int delay_restart;
