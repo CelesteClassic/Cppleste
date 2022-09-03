@@ -15,6 +15,9 @@
 #include <iomanip>
 #include <chrono>
 #include <thread>
+#include <mutex>
+#include <condition_variable>
+#include <queue>
 
 int count = 0;
 
@@ -252,34 +255,163 @@ public:
 };
 
 
-class SearchelineWorker;
+template<typename Cart=Celeste>
+class SearchelineWorker: public Searcheline<Cart>{
 
-class ThreadedSearcheline{
+    template <typename, typename> friend class ThreadedSearcheline;
 
+public:
+    using objlist=typename Searcheline<Cart>::objlist;
+    std::mutex& var_lock;
+    bool ret=false;
+    int &waiting_count;
+    std::queue<std::tuple<const objlist , int, std::vector<int>>> &state_queue;
+    std::condition_variable cv;
+    const int worker_num;
+
+    SearchelineWorker(std::mutex& var_lock, int& waiting_count, std::queue<std::tuple<const objlist, int, std::vector<int>>> &state_queue, int worker_num):
+        var_lock(var_lock),
+        waiting_count(waiting_count),
+        state_queue(state_queue),
+        worker_num(worker_num){}
+
+    bool work(){
+        while(true){
+
+            std::unique_lock<std::mutex> lk(var_lock);
+
+            waiting_count++;
+            cv.wait(lk, [this]{return !this->state_queue.empty() || waiting_count==worker_num;});
+            waiting_count--;
+
+            if(!state_queue.empty()){
+
+                const objlist state=move(std::get<0>(state_queue.front()));
+                int depth=std::get<1>(state_queue.front());
+                std::vector<int> inputs=std::get<2>(state_queue.front());
+                state_queue.pop();
+
+                lk.unlock();
+
+                ret |= iddfs(state,depth,inputs);
+            }
+            else{
+                return ret;
+            }
+        }
+    }
+
+    bool iddfs(const objlist &state, int depth, std::vector<int> inputs) {
+        if (depth == 0 && this->is_goal(state)) {
+            std::lock_guard<std::mutex> lock(var_lock);
+            this->solutions.push_back(inputs);
+            std::cout << "  inputs: ";
+            for (auto i: inputs) {
+                std::cout << i << ", ";
+            }
+            std::cout << std::endl;
+            std::cout << "  frames: " << inputs.size() - 1 << std::endl;
+            return true;
+        }
+
+        else {
+
+            bool optimal_depth = false;
+            if (depth > 0 && this->h_cost(state) <= depth) {
+                for (auto a:this->get_actions(state)) {
+                    std::tuple<const objlist &, int> trans = this->transition(state, a);
+                    objlist new_state = this->deepcopy(std::get<0>(trans));
+                    int freeze = std::get<1>(trans);
+                    // change: uses current array instead of allocating a new one
+                    // should be better performance wise, will probably check
+                    inputs.push_back(a);
+                    for (int i = 0; i < freeze; i++) {
+                        inputs.push_back(0);
+                    }
+
+                    bool recurse;
+                    {
+                        std::lock_guard<std::mutex> lock(var_lock);
+                        recurse=waiting_count>0;
+                    }
+                    if(recurse){
+                        bool done = iddfs(new_state, depth - 1 - freeze, inputs);
+
+                        if (done) {
+                            optimal_depth = true;
+                        }
+                    }
+                    else{
+                        state_queue.emplace(move(new_state),depth-1-freeze,inputs);
+                    }
+
+                    for (int i = 0; i < freeze; i++) {
+                        inputs.pop_back();
+                    }
+                    inputs.pop_back();
+                }
+            }
+            //std::cout<<count<<std::endl;
+            return optimal_depth;
+        }
+    }
+};
+
+template<typename workerType, typename Cart=Celeste>
+class ThreadedSearcheline {
+
+protected:
     int worker_count;
-    queue<tuple<const objlist &, int, std::vector<int>>> state_queue;
 
+public:
+    ThreadedSearcheline(int worker_count): worker_count(worker_count){}
 
+    using objlist=typename workerType::objlist;
+    std::vector<std::vector<int>> solutions;
     std::vector<std::vector<int>> search(int max_depth, bool complete = false) {
-        std::vector<SearchelineWorker> workers(active_count);
+        std::vector<workerType> workers;
+
+        std::mutex var_lock;
+        int waiting_count;
+        std::queue<std::tuple<const objlist, int, std::vector<int>>> state_queue;
+
+        for(int i=0; i<worker_count; i++){
+            workers.emplace_back(var_lock,waiting_count,state_queue,worker_count);
+            if(i!=0){
+                workers[i].init_state();
+            }
+        }
+        objlist state = Searcheline<Cart>::deepcopy(workers[0].init_state());
 
         auto t1 = std::chrono::high_resolution_clock::now();
-        objlist state = deepcopy(init_state());
         std::cout << "searching..." << std::endl;
 
         for (int depth = 0; depth <= max_depth; depth++) {
             std::cout << "depth " << depth << "..." << std::endl;
             std::vector<int> inputs;
 
-            vector<thread> threads;
+            std::vector<std::thread> threads;
 
-            int active_count=0;
+            waiting_count=0;
+            state_queue.emplace(state,depth,inputs);
+
             for(int i=0; i<worker_count; i++){
-                threads.emplace_back(&SearchelineWorker::work, workers[i]);
+                threads.emplace_back(&workerType::work, workers[i]);
             }
 
-            done = false;
 
+            for(auto &t: threads){
+                t.join();
+            }
+
+            bool done = false;
+            for (auto &w: workers){
+                if(w.ret){
+                    done=true;
+                }
+                this->solutions.insert(this->solutions.end(),w.solutions.begin(),w.solutions.end());
+            }
+            done = done && !complete;
 
             auto t2 = std::chrono::high_resolution_clock::now();
             std::chrono::duration<double> elapsed_time = t2 - t1;
@@ -289,43 +421,9 @@ class ThreadedSearcheline{
                 break;
             }
         }
-        return solutions;
-}
-class SearchelineWorker: Searcheline{
-    SearchelineWorker();
-
-    mutex& var_lock;
-    bool &done;
-    bool ret=false;
-    int &waiting_count;
-    queue<tuple<const objlist &, int, std::vector<int>>> state_queue;
-    
-    void work(){
-        while(true){
-            tuple<const objlist &, int, std::vector<int>> next_state;
-            bool not_empty=false;
-            {
-                lock_guard<mutex> guard(var_lock);
-                if(done){
-                    return ret;
-                }
-                else if(!state_queue.empty()){
-                    not_empty=true;
-                    next_state=state_queue.front();
-                    state_queue.pop();
-                }
-            }
-            if (not_empty){
-                const objlist &state;
-                int depth;
-                std::vector<int> inputs;
-
-                {state,depth,inputs}=tie(next_state);
-                ret |= iddfs(state,depth,inputs);
-            }
-        }
+        return this->solutions;
     }
-}
+};
 
 
 #endif //CPPLESTE_SEARCHELINE_H
