@@ -14,6 +14,7 @@
 #include <iostream>
 #include <iomanip>
 #include <chrono>
+#include <thread>
 
 int count = 0;
 
@@ -104,7 +105,7 @@ public:
         return std::forward_as_tuple(p8.game().objects, freeze);
     }
 
-    bool iddfs(const objlist &state, int depth, std::vector<int> &inputs) {
+    bool iddfs(const objlist &state, int depth, std::vector<int> inputs) {
         //std::cout<<"in";
         if (depth == 0 && is_goal(state)) {
             solutions.push_back(inputs);
@@ -249,6 +250,82 @@ public:
         return ret;
     }
 };
+
+
+class SearchelineWorker;
+
+class ThreadedSearcheline{
+
+    int worker_count;
+    queue<tuple<const objlist &, int, std::vector<int>>> state_queue;
+
+
+    std::vector<std::vector<int>> search(int max_depth, bool complete = false) {
+        std::vector<SearchelineWorker> workers(active_count);
+
+        auto t1 = std::chrono::high_resolution_clock::now();
+        objlist state = deepcopy(init_state());
+        std::cout << "searching..." << std::endl;
+
+        for (int depth = 0; depth <= max_depth; depth++) {
+            std::cout << "depth " << depth << "..." << std::endl;
+            std::vector<int> inputs;
+
+            vector<thread> threads;
+
+            int active_count=0;
+            for(int i=0; i<worker_count; i++){
+                threads.emplace_back(&SearchelineWorker::work, workers[i]);
+            }
+
+            done = false;
+
+
+            auto t2 = std::chrono::high_resolution_clock::now();
+            std::chrono::duration<double> elapsed_time = t2 - t1;
+            std::cout << "  elapsed time: " << std::fixed << std::setprecision(2) << (elapsed_time.count()) << " [s]"
+                      << std::endl;
+            if (done) {
+                break;
+            }
+        }
+        return solutions;
+}
+class SearchelineWorker: Searcheline{
+    SearchelineWorker();
+
+    mutex& var_lock;
+    bool &done;
+    bool ret=false;
+    int &waiting_count;
+    queue<tuple<const objlist &, int, std::vector<int>>> state_queue;
+    
+    void work(){
+        while(true){
+            tuple<const objlist &, int, std::vector<int>> next_state;
+            bool not_empty=false;
+            {
+                lock_guard<mutex> guard(var_lock);
+                if(done){
+                    return ret;
+                }
+                else if(!state_queue.empty()){
+                    not_empty=true;
+                    next_state=state_queue.front();
+                    state_queue.pop();
+                }
+            }
+            if (not_empty){
+                const objlist &state;
+                int depth;
+                std::vector<int> inputs;
+
+                {state,depth,inputs}=tie(next_state);
+                ret |= iddfs(state,depth,inputs);
+            }
+        }
+    }
+}
 
 
 #endif //CPPLESTE_SEARCHELINE_H
