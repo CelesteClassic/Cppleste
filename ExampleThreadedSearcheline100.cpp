@@ -43,6 +43,6 @@ class Search100: public SearchelineWorker<>{
 
 int main(){
     // search up to depth 50, but stop at the depth of the first solution found
-    ThreadedSearcheline<Search100> s(2);
+    ThreadedSearcheline<Search100> s(1);
     vector<vector<int>> solutions=s.search(50);
 }

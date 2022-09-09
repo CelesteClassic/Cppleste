@@ -19,6 +19,7 @@
 #include <condition_variable>
 #include <queue>
 #include <atomic>
+#include <functional>
 
 int count = 0;
 
@@ -311,11 +312,15 @@ public:
                 state_queue.pop();
 
                 lk.unlock();
+                for(auto& obj: state){
+                    obj->p8=std::ref(this->p8);
+                    obj->g=std::ref(this->p8.game());
+                }
 
                 ret |= iddfs(state,depth,inputs);
             }
             else if(waiting_count==worker_num){
-                std::cout<<id<<" exiting"<<std::endl;
+                // std::cout<<id<<" exiting"<<std::endl;
                 return ret;
             }
         }
@@ -376,6 +381,7 @@ public:
             }
             //std::cout<<count<<std::endl;
 
+            std::lock_guard<std::mutex> lock(var_lock);
             std::cout<<id<<" exiting iddfs"<<std::endl;
             return optimal_depth;
         }
