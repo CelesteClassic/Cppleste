@@ -298,6 +298,7 @@ public:
             std::cout<<id<<" waiting "<<std::endl;
             waiting_count++;
             cv.notify_all();
+
             cv.wait(lk, [this]{std::cout<<id<<" checking condition"<<std::endl;return !this->state_queue.empty() || waiting_count==worker_num;});
             std::cout<<id<<" releasing "<<std::endl;
 
@@ -349,7 +350,6 @@ public:
                     }
 
                     std::unique_lock<std::mutex> lock(var_lock);
-                    lock.lock();
 
                     if(waiting_count==0){
                         std::cout<<id<<" recursing"<<std::endl;
