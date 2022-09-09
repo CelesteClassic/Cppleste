@@ -18,6 +18,7 @@
 #include <mutex>
 #include <condition_variable>
 #include <queue>
+#include <atomic>
 
 int count = 0;
 
@@ -263,30 +264,47 @@ class SearchelineWorker: public Searcheline<Cart>{
 public:
     using objlist=typename Searcheline<Cart>::objlist;
     std::mutex& var_lock;
-    bool ret=false;
-    int &waiting_count;
-    std::queue<std::tuple<const objlist , int, std::vector<int>>> &state_queue;
-    std::condition_variable cv;
+    bool ret;
+    std::atomic<int> &waiting_count;
+    std::queue<std::tuple<objlist , int, std::vector<int>>> &state_queue;
     const int worker_num;
+    std::condition_variable &cv;
+    int id;
 
-    SearchelineWorker(std::mutex& var_lock, int& waiting_count, std::queue<std::tuple<const objlist, int, std::vector<int>>> &state_queue, int worker_num):
+    SearchelineWorker(std::mutex& var_lock, std::atomic<int>& waiting_count, std::queue<std::tuple<objlist, int, std::vector<int>>> &state_queue, int worker_num, std::condition_variable& cv, int id):
         var_lock(var_lock),
         waiting_count(waiting_count),
         state_queue(state_queue),
-        worker_num(worker_num){}
+        worker_num(worker_num),
+        ret(false),
+        cv(cv),
+        id(id){}
+
+    SearchelineWorker(const SearchelineWorker&)=delete;
+    SearchelineWorker(SearchelineWorker&& other):
+        var_lock(other.var_lock),
+        waiting_count(other.waiting_count),
+        state_queue(other.state_queue),
+        worker_num(other.worker_num),
+        ret(other.ret),
+        cv(other.cv),
+        id(other.id){}
 
     bool work(){
         while(true){
 
             std::unique_lock<std::mutex> lk(var_lock);
 
+            std::cout<<id<<" waiting "<<std::endl;
             waiting_count++;
-            cv.wait(lk, [this]{return !this->state_queue.empty() || waiting_count==worker_num;});
-            waiting_count--;
+            cv.notify_all();
+            cv.wait(lk, [this]{std::cout<<id<<" checking condition"<<std::endl;return !this->state_queue.empty() || waiting_count==worker_num;});
+            std::cout<<id<<" releasing "<<std::endl;
 
             if(!state_queue.empty()){
+                waiting_count--;
 
-                const objlist state=move(std::get<0>(state_queue.front()));
+                objlist state=std::move(std::get<0>(state_queue.front())); // i'd prefer to use move() here, but cpp is being a bitch
                 int depth=std::get<1>(state_queue.front());
                 std::vector<int> inputs=std::get<2>(state_queue.front());
                 state_queue.pop();
@@ -295,7 +313,8 @@ public:
 
                 ret |= iddfs(state,depth,inputs);
             }
-            else{
+            else if(waiting_count==worker_num){
+                std::cout<<id<<" exiting"<<std::endl;
                 return ret;
             }
         }
@@ -329,12 +348,13 @@ public:
                         inputs.push_back(0);
                     }
 
-                    bool recurse;
-                    {
-                        std::lock_guard<std::mutex> lock(var_lock);
-                        recurse=waiting_count>0;
-                    }
-                    if(recurse){
+                    std::unique_lock<std::mutex> lock(var_lock);
+                    lock.lock();
+
+                    if(waiting_count==0){
+                        std::cout<<id<<" recursing"<<std::endl;
+                        lock.unlock();
+                        cv.notify_one();
                         bool done = iddfs(new_state, depth - 1 - freeze, inputs);
 
                         if (done) {
@@ -342,7 +362,10 @@ public:
                         }
                     }
                     else{
+                        std::cout<<id<<" pushing"<<std::endl;
                         state_queue.emplace(move(new_state),depth-1-freeze,inputs);
+                        lock.unlock();
+                        cv.notify_one();
                     }
 
                     for (int i = 0; i < freeze; i++) {
@@ -352,6 +375,8 @@ public:
                 }
             }
             //std::cout<<count<<std::endl;
+
+            std::cout<<id<<" exiting iddfs"<<std::endl;
             return optimal_depth;
         }
     }
@@ -372,11 +397,13 @@ public:
         std::vector<workerType> workers;
 
         std::mutex var_lock;
-        int waiting_count;
-        std::queue<std::tuple<const objlist, int, std::vector<int>>> state_queue;
+        std::atomic<int> waiting_count;
+        std::queue<std::tuple<objlist, int, std::vector<int>>> state_queue;
+        std::condition_variable cv;
 
         for(int i=0; i<worker_count; i++){
-            workers.emplace_back(var_lock,waiting_count,state_queue,worker_count);
+            workers.emplace_back(var_lock, waiting_count, state_queue, worker_count,cv,i);
+
             if(i!=0){
                 workers[i].init_state();
             }
@@ -393,11 +420,12 @@ public:
             std::vector<std::thread> threads;
 
             waiting_count=0;
-            state_queue.emplace(state,depth,inputs);
+            state_queue.emplace(Searcheline<Cart>::deepcopy(state),depth,inputs);
 
-            for(int i=0; i<worker_count; i++){
-                threads.emplace_back(&workerType::work, workers[i]);
+            for(auto &w: workers){
+                threads.emplace_back(&workerType::work, &w);
             }
+
 
 
             for(auto &t: threads){
