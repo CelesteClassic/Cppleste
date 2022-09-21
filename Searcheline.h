@@ -89,7 +89,7 @@ public:
     static objlist deepcopy(const objlist &objs) {
         objlist cp;
         for (auto &i: objs) {
-            cp.emplace_back(dynamic_cast<typename Cart::base_obj *>(i->clone()));
+            cp.emplace_back(i->clone());
         }
         return cp;
     }
@@ -174,9 +174,8 @@ public:
 
     typename Cart::player *find_player(const objlist &objs) {
         for (auto &o: objs) {
-            auto p = dynamic_cast<typename Cart::player *>(o.get());
-            if (p != nullptr) {
-                return p;
+            if (o && o->type_id==Cart::player::type_enum) {
+                return dynamic_cast<typename Cart::player *>(o.get());
             }
         }
         return nullptr;
@@ -184,9 +183,8 @@ public:
 
     typename Cart::player_spawn *find_player_spawn(const objlist &objs) {
         for (auto &o: objs) {
-            auto p = dynamic_cast<typename Cart::player_spawn *>(o.get());
-            if (p != nullptr) {
-                return p;
+            if (o && o->type_id==Cart::player_spawn::type_enum) {
+                return dynamic_cast<typename Cart::player_spawn *>(o.get());
             }
         }
         return nullptr;

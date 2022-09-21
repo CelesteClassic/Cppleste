@@ -54,7 +54,7 @@ namespace utils {
         auto it = objects.begin();
         while (it != objects.end()) {
             auto nxt = next(it);
-            if (dynamic_cast<obj *>(it->get()) != nullptr) {
+            if (it->get() && it->get()->type_id == obj::type_enum) {
                 objects.erase(it);
             }
             it = nxt;
@@ -63,7 +63,8 @@ namespace utils {
 
     template<typename Cart>
     void skip_player_spawn(PICO8<Cart> &p8) {
-        while (dynamic_cast<typename Cart::player_spawn *>(p8.game().get_player()) != nullptr) {
+        typename Cart::base_obj *p;
+        while (!(p=p8.game().get_player()) || p->type_id != Cart::player::type_enum) {
 
             p8.step();
         }

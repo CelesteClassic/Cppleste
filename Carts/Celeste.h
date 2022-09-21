@@ -13,10 +13,12 @@
 #include "../PICO8.h"
 
 struct Celeste{
+    enum ObjType {BASE_OBJ=-1, PLAYER_SPAWN, PLAYER, BALLOON, PLATFORM, FRUIT, FLY_FRUIT, FAKE_WALL, SPRING, FALL_FLOOR, KEY, CHEST};
+    template<typename T>
     struct Pair {
-        double x;
-        double y;
-        Pair(double x, double y);
+        T x;
+        T y;
+        Pair(T x, T y);
         Pair()=default;
     };
     struct Rect{
@@ -27,6 +29,7 @@ struct Celeste{
         Rect(int x, int y, int w, int h);
     };
     struct base_obj{
+        const static ObjType type_enum=BASE_OBJ;
         double x;
         double y;
         bool collideable;
@@ -34,10 +37,11 @@ struct Celeste{
         int spr;
         std::string ascii;
         std::string type;
-        Pair flip;
+        ObjType type_id;
+        Pair<bool> flip;
         Rect hitbox;
-        Pair spd;
-        Pair rem;
+        Pair<double> spd;
+        Pair<double> rem;
         Celeste &g;
         PICO8<Celeste>& p8;
         base_obj(PICO8<Celeste> &p8, Celeste &g, int x, int y, int tile=-1);
@@ -51,12 +55,12 @@ struct Celeste{
         template<typename obj>
         obj* check(int ox, int oy) const{
             for (auto &other: g.objects) {
-                if (dynamic_cast<obj *>(other.get()) != nullptr && other.get() != this && other->collideable &&
+                if (other!=nullptr && other-> type_id == obj::type_enum && other.get() != this && other->collideable &&
                     other->x + other->hitbox.x + other->hitbox.w > x + hitbox.x + ox &&
                     other->y + other->hitbox.y + other->hitbox.h > y + hitbox.y + oy &&
                     other->x + other->hitbox.x < x + hitbox.x + hitbox.w + ox &&
                     other->y + other->hitbox.y < y + hitbox.y + hitbox.h + oy) {
-                    return dynamic_cast<obj *>(other.get());
+                    return static_cast<obj*>(other.get());
                 }
             }
             return nullptr;
@@ -74,6 +78,7 @@ struct Celeste{
     };
 
     struct player_spawn : public base_obj{
+        const static ObjType type_enum=PLAYER_SPAWN;
         int target;
         int state;
         int delay;
@@ -84,6 +89,7 @@ struct Celeste{
 
     };
     struct player : public base_obj{
+        const static ObjType type_enum=PLAYER;
         bool p_jump;
         bool p_dash;
         int grace;
@@ -91,8 +97,8 @@ struct Celeste{
         int djump;
         int dash_time;
         int dash_effect_time;
-        Pair dash_target;
-        Pair dash_accel;
+        Pair<double> dash_target;
+        Pair<double> dash_accel;
         player(PICO8<Celeste> &p8, Celeste &g, int x, int y, int tile=-1);
         void init() override;
         void update() override;
@@ -101,6 +107,7 @@ struct Celeste{
 
     };
     struct balloon : public base_obj{
+        const static ObjType type_enum=BALLOON;
         int timer;
         balloon(PICO8<Celeste> &p8, Celeste &g, int x, int y, int tile=-1);
         void init() override;
@@ -108,6 +115,7 @@ struct Celeste{
         balloon* clone() const override;
     };
     struct platform : public base_obj{
+        const static ObjType type_enum=PLATFORM;
         double last;
         int dir;
         platform(PICO8<Celeste> &p8, Celeste &g, int x, int y, int tile=-1);
@@ -116,6 +124,7 @@ struct Celeste{
         platform* clone() const override;
     };
     struct fruit : public base_obj{
+        const static ObjType type_enum=FRUIT;
         double start;
         int off;
         fruit(PICO8<Celeste> &p8, Celeste &g, int x, int y, int tile=-1);
@@ -124,6 +133,7 @@ struct Celeste{
         fruit* clone() const override;
     };
     struct fly_fruit : public base_obj{
+        const static ObjType type_enum=FLY_FRUIT;
         bool fly;
         double step;
         bool solids;
@@ -133,11 +143,13 @@ struct Celeste{
         fly_fruit* clone() const override;
     };
     struct fake_wall : public base_obj{
+        const static ObjType type_enum=FAKE_WALL;
         fake_wall(PICO8<Celeste> &p8, Celeste &g, int x, int y, int tile=-1);
         void update() override;
         fake_wall* clone() const override;
     };
     struct spring : public base_obj{
+        const static ObjType type_enum=SPRING;
         int hide_for;
         int hide_in;
         int delay;
@@ -147,6 +159,7 @@ struct Celeste{
         spring* clone() const override;
     };
     struct fall_floor: public base_obj{
+        const static ObjType type_enum=FALL_FLOOR;
         int state;
         int delay;
         fall_floor(PICO8<Celeste> &p8, Celeste &g, int x, int y, int tile=-1);
@@ -157,11 +170,13 @@ struct Celeste{
     static void break_spring(spring& s);
     static void break_fall_floor(fall_floor& s);
     struct key : public base_obj{
+        const static ObjType type_enum=KEY;
         key(PICO8<Celeste> &p8, Celeste &g, int x, int y, int tile=-1);
         void update() override;
         key* clone() const override;
     };
     struct chest : public base_obj{
+        const static ObjType type_enum=CHEST;
         int timer;
         chest(PICO8<Celeste> &p8, Celeste &g, int x, int y, int tile=-1);
         void init() override;
@@ -169,7 +184,7 @@ struct Celeste{
         chest* clone() const override;
     };
     PICO8<Celeste>& p8;
-    Pair room;
+    Pair<int> room;
     std::list<std::unique_ptr<base_obj>> objects;
     int freeze;
     int delay_restart;
