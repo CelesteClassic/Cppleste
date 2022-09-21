@@ -35,13 +35,13 @@ bool Celeste::base_obj::is_solid(int ox, int oy) const {
     if (oy > 0 && !collide<platform>(ox, 0) && collide<platform>(ox, oy)) {
         return true;
     }
-    return g.tile_flag_at(x + hitbox.x + ox, y + hitbox.y + oy, hitbox.w, hitbox.h, 0) ||
+    return g.get().tile_flag_at(x + hitbox.x + ox, y + hitbox.y + oy, hitbox.w, hitbox.h, 0) ||
            collide<fall_floor>(ox, oy) ||
            collide<fake_wall>(ox, oy);
 }
 
 bool Celeste::base_obj::is_ice(int ox, int oy) const {
-    return g.tile_flag_at(x + hitbox.x + ox, y + hitbox.y + oy, hitbox.w, hitbox.h, 4);
+    return g.get().tile_flag_at(x + hitbox.x + ox, y + hitbox.y + oy, hitbox.w, hitbox.h, 4);
 }
 
 
@@ -59,7 +59,7 @@ void Celeste::base_obj::move(double ox, double oy) {
 
 void Celeste::base_obj::move_x(int amt, int start) {
     if (solids) {
-        int step = g.sign(amt);
+        int step = g.get().sign(amt);
         int end = abs(amt);
         for (int i = start; i <= end; i++) {
             if (!is_solid(step, 0)) {
@@ -79,7 +79,7 @@ void Celeste::base_obj::move_x(int amt, int start) {
 
 void Celeste::base_obj::move_y(int amt) {
     if (solids) {
-        int step = g.sign(amt);
+        int step = g.get().sign(amt);
         int end = abs(amt);
         for (int i = 0; i <= end; i++) {
             if (!is_solid(0, step)) {
@@ -143,8 +143,8 @@ void Celeste::player_spawn::update() {
     else if (state == 2) {
         delay -= 1;
         if (delay < 0) {
-            g.init_object<player>(x, y);
-            g.destroy_object(this);
+            g.get().init_object<player>(x, y);
+            g.get().destroy_object(this);
         }
     }
 }
@@ -174,16 +174,16 @@ void Celeste::player::init() {
 }
 
 void Celeste::player::update() {
-    int h_input = p8.btn(k_right) ? 1 : p8.btn(k_left) ? -1 : 0;
+    int h_input = p8.get().btn(k_right) ? 1 : p8.get().btn(k_left) ? -1 : 0;
     bool kill=false;
-    if (g.spikes_at(x + hitbox.x, y + hitbox.y, hitbox.w, hitbox.h, spd.x, spd.y) || y > 128) {
+    if (g.get().spikes_at(x + hitbox.x, y + hitbox.y, hitbox.w, hitbox.h, spd.x, spd.y) || y > 128) {
         kill = true;
     }
     bool on_ground = is_solid(0, 1);
-    bool jump = p8.btn(k_jump) && !p_jump;
-    bool dash = p8.btn(k_dash) && !p_dash;
-    p_jump = p8.btn(k_jump);
-    p_dash = p8.btn(k_dash);
+    bool jump = p8.get().btn(k_jump) && !p_jump;
+    bool dash = p8.get().btn(k_dash) && !p_dash;
+    p_jump = p8.get().btn(k_jump);
+    p_dash = p8.get().btn(k_dash);
 
     if (jump) {
         jbuffer = 4;
@@ -194,7 +194,7 @@ void Celeste::player::update() {
 
     if (on_ground) {
         grace = 6;
-        djump = g.max_djump;
+        djump = g.get().max_djump;
     }
     else if (grace > 0) {
         grace--;
@@ -204,15 +204,15 @@ void Celeste::player::update() {
 
     if (dash_time > 0) {
         dash_time--;
-        spd.x = g.appr(spd.x, dash_target.x, dash_accel.x);
-        spd.y = g.appr(spd.y, dash_target.y, dash_accel.y);
+        spd.x = g.get().appr(spd.x, dash_target.x, dash_accel.x);
+        spd.y = g.get().appr(spd.y, dash_target.y, dash_accel.y);
     }
     else {
         double maxrun = 1;
         double accel = !on_ground ? 0.4 : is_ice(0, 1) ? 0.05 : 0.6;
         double deccel = 0.15;
 
-        spd.x = (abs(spd.x) <= 1) ? g.appr(spd.x, h_input * maxrun, accel) : g.appr(spd.x, g.sign(spd.x) * maxrun,
+        spd.x = (abs(spd.x) <= 1) ? g.get().appr(spd.x, h_input * maxrun, accel) : g.get().appr(spd.x, g.get().sign(spd.x) * maxrun,
                                                                                     deccel);
 
         if (spd.x != 0) {
@@ -222,7 +222,7 @@ void Celeste::player::update() {
         double maxfall = (h_input == 0 || !is_solid(h_input, 0) || is_ice(h_input, 0)) ? 2 : 0.4;
 
         if (!on_ground) {
-            spd.y = g.appr(spd.y, maxfall, abs(spd.y) > 0.15 ? 0.21 : 0.105);
+            spd.y = g.get().appr(spd.y, maxfall, abs(spd.y) > 0.15 ? 0.21 : 0.105);
         }
 
         if (jbuffer > 0) {
@@ -246,13 +246,13 @@ void Celeste::player::update() {
         if (djump > 0 && dash) {
             djump--;
             dash_time = 4;
-            g.has_dashed = true;
+            g.get().has_dashed = true;
             dash_effect_time = 10;
-            int v_input = p8.btn(k_up) ? -1 : p8.btn(k_down) ? 1 : 0;
+            int v_input = p8.get().btn(k_up) ? -1 : p8.get().btn(k_down) ? 1 : 0;
             spd.x = h_input != 0 ? h_input * (v_input == 0 ? d_full : d_half) : (v_input != 0 ? 0 : flip.x ? -1 : 1);
             spd.y = v_input != 0 ? v_input * (h_input == 0 ? d_full : d_half) : 0;
 
-            g.freeze = 2;
+            g.get().freeze = 2;
             dash_target.x = 2 * sign(spd.x);
             dash_target.y = (spd.y > 0 ? 2 : 1.5) * sign(spd.y);
             dash_accel.x = spd.y == 0 ? 1.5 : 1.06066017177;
@@ -260,10 +260,10 @@ void Celeste::player::update() {
         }
     }
     if (y < -4) {
-        g.next_room();
+        g.get().next_room();
     }
     if(kill){
-        g.kill_player(this);
+        g.get().kill_player(this);
     }
 }
 
@@ -293,8 +293,8 @@ void Celeste::balloon::init() {
 void Celeste::balloon::update() {
     if (spr==22){
         auto* hit=check<player>(0,0);
-        if (hit!=nullptr && hit->djump<g.max_djump){
-            hit->djump=g.max_djump;
+        if (hit!=nullptr && hit->djump<g.get().max_djump){
+            hit->djump=g.get().max_djump;
             spr=0;
             timer=60;
         }
@@ -359,8 +359,8 @@ void Celeste::fruit::init() {
 void Celeste::fruit::update() {
     auto* hit=check<player>(0,0);
     if(hit!=nullptr){
-        hit->djump=g.max_djump;
-        g.destroy_object(this);
+        hit->djump=g.get().max_djump;
+        g.get().destroy_object(this);
     }
     else {
         off++;
@@ -388,12 +388,12 @@ void Celeste::fly_fruit::update() {
     if (fly){
         spd.y=appr(spd.y,-3.5,0.25);
         if (y<-16){
-            g.destroy_object(this);
+            g.get().destroy_object(this);
             return;
         }
     }
     else{
-        if(g.has_dashed){
+        if(g.get().has_dashed){
             fly=true;
         }
         step+=0.05;
@@ -401,8 +401,8 @@ void Celeste::fly_fruit::update() {
     }
     auto* hit=check<player>(0,0);
     if(hit!= nullptr){
-        hit->djump=g.max_djump;
-        g.destroy_object(this);
+        hit->djump=g.get().max_djump;
+        g.get().destroy_object(this);
     }
 }
 
@@ -424,8 +424,8 @@ void Celeste::fake_wall::update() {
         hit->spd.x= -sign(hit->spd.x)*1.5;
         hit->spd.y=-1.5;
         hit->dash_time=-1;
-        g.init_object<fruit>(x+4,y+4,26);
-        g.destroy_object(this);
+        g.get().init_object<fruit>(x+4,y+4,26);
+        g.get().destroy_object(this);
     }
     else {
         hitbox.w = 16;
@@ -462,7 +462,7 @@ void Celeste::spring::update() {
             hit->y=y-4;
             hit->spd.x*=0.2;
             hit->spd.y=-3;
-            hit->djump=g.max_djump;
+            hit->djump=g.get().max_djump;
             delay=10;
             auto* below=check<fall_floor>(0,1);
             if(below!=nullptr){
@@ -551,8 +551,8 @@ Celeste::key::key(PICO8<Celeste> &p8, Celeste &g, int x, int y, int tile) : base
 
 void Celeste::key::update() {
     if (collide<player>(0,0)){
-        g.has_key=true;
-        g.destroy_object(this);
+        g.get().has_key=true;
+        g.get().destroy_object(this);
     }
 }
 
@@ -573,14 +573,14 @@ void Celeste::chest::init() {
 }
 
 void Celeste::chest::update() {
-    if(g.has_key){
+    if(g.get().has_key){
         timer--;
         if(timer<=0){
-            auto& f=g.init_object<fruit>(x,y-4,26);
+            auto& f=g.get().init_object<fruit>(x,y-4,26);
             //change: remove rng by expanding the fruit's hitbox
             f.hitbox.x-=1;
             f.hitbox.w+=3;
-            g.destroy_object(this);
+            g.get().destroy_object(this);
         }
     }
 }

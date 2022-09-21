@@ -10,6 +10,8 @@
 #include <iomanip>
 #include <map>
 #include <vector>
+#include <functional>
+
 #include "../PICO8.h"
 
 struct Celeste{
@@ -42,8 +44,10 @@ struct Celeste{
         Rect hitbox;
         Pair<double> spd;
         Pair<double> rem;
-        Celeste &g;
-        PICO8<Celeste>& p8;
+        // std::reference_wrapper<Celeste> g;
+        // std::reference_wrapper<PICO8<Celeste>> p8;
+        std::reference_wrapper<Celeste> g;
+        std::reference_wrapper<PICO8<Celeste>> p8;
         base_obj(PICO8<Celeste> &p8, Celeste &g, int x, int y, int tile=-1);
         virtual ~base_obj()=default;
         virtual void init();
@@ -54,7 +58,7 @@ struct Celeste{
 
         template<typename obj>
         obj* check(int ox, int oy) const{
-            for (auto &other: g.objects) {
+            for (auto &other: g.get().objects) {
                 if (other!=nullptr && other-> type_id == obj::type_enum && other.get() != this && other->collideable &&
                     other->x + other->hitbox.x + other->hitbox.w > x + hitbox.x + ox &&
                     other->y + other->hitbox.y + other->hitbox.h > y + hitbox.y + oy &&
