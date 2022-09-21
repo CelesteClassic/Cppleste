@@ -60,7 +60,7 @@ struct Celeste{
                     other->y + other->hitbox.y + other->hitbox.h > y + hitbox.y + oy &&
                     other->x + other->hitbox.x < x + hitbox.x + hitbox.w + ox &&
                     other->y + other->hitbox.y < y + hitbox.y + hitbox.h + oy) {
-                    return dynamic_cast<obj *>(other.get());
+                    return static_cast<obj*>(other.get());
                 }
             }
             return nullptr;

@@ -728,7 +728,7 @@ obj &Celeste::init_object(int x, int y, int tile) {
     objects.push_back(std::make_unique<obj>(p8, *this, x, y, tile));
     auto &o = objects.back();
     o->init();
-    return dynamic_cast<obj &>(*o);
+    return static_cast<obj &>(*o);
 }
 
 template<typename obj>
@@ -748,7 +748,7 @@ void Celeste::kill_player(Celeste::player *p) {
 
 Celeste::base_obj *Celeste::get_player() {
     for (auto &o: objects) {
-        if (o->type_id == Celeste::PLAYER  || o->type_id == Celeste::PLAYER_SPAWN ) {
+        if (o && (o->type_id == Celeste::PLAYER  || o->type_id == Celeste::PLAYER_SPAWN)) {
             return o.get();
         }
     }
@@ -842,14 +842,14 @@ std::ostream &operator<<(std::ostream &os, Celeste &c) {
         int pos = ox + 17 * oy;
         if(ox>=0&& ox<=15&&oy>=0&&oy<=15) {
             map_str[pos] = o->ascii;
-            if(o->type_id==Celeste::PLATFORM&&ox+1<=15){
+            if(o && o->type_id==Celeste::PLATFORM&&ox+1<=15){
                 map_str[pos+1]=o->ascii;
             }
-            else if(o->type_id==Celeste::FLY_FRUIT){
+            else if(o && o->type_id==Celeste::FLY_FRUIT){
                 if(ox-1>=0) map_str[pos-1]=" »";
                 if(ox+1<=15) map_str[pos+1]="« ";
             }
-            else if(o->type_id==Celeste::FAKE_WALL){
+            else if(o && o->type_id==Celeste::FAKE_WALL){
                 if (ox + 1 <= 15) map_str[pos + 1] = o->ascii;
                 if (oy + 1 <= 15) map_str[pos + 17] = o->ascii;
                 if (ox + 1 <= 15 && oy + 1 <= 15) map_str[pos + 18] = o->ascii;
