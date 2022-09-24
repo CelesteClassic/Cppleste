@@ -776,6 +776,11 @@ int Celeste::mod(int a, int b) {
     return (r>=0)?r:b+r;
 }
 
+//define sin function in order to match up with p8s sin
+double Celeste::sin(double a){
+    return std::sin(-std::numbers::pi*2*a);
+}
+
 bool Celeste::tile_flag_at(int x, int y, int w, int h, int flag) const{
     for (int i = max(0, x / 8); i <= min(15, (x + w - 1) / 8); i++) {
         for (int j = max(0, y / 8); j <= min(15, (y + h - 1) / 8); j++) {

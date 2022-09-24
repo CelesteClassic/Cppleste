@@ -11,6 +11,7 @@
 #include <map>
 #include <vector>
 #include <functional>
+#include <numbers>
 
 #include "../PICO8.h"
 
@@ -225,6 +226,7 @@ struct Celeste{
     static double clamp(double val, double a, double b);
     static double appr(double val, double target, double amt);
     static double sign (double x);
+    static double sin(double a);
     static int mod(int a, int b);
     bool tile_flag_at(int x, int y, int w, int h, int flag) const;
     int tile_at(int x, int y) const;
