@@ -618,8 +618,10 @@ void Celeste::_update() {
         }
     }
     for (auto &o:objects) {
-        o->move(o->spd.x, o->spd.y);
-        o->update();
+        if(o!=nullptr){
+            o->move(o->spd.x, o->spd.y);
+            o->update();
+        }
     }
 
     //next room transition
