@@ -67,18 +67,18 @@ int main(){
 ████████████████████        ████
 ██████████████████           <██
 ██████vvvvvvvv               <██
-████>                           
-██>                             
-                                
-                                
-                                
-                  ()      ()    
-                                
-                                
-        ^^                      
-        ██>                     
-        ██>                     
-        ██>     :D              
+████>
+██>
+
+
+
+                  ()      ()
+
+
+        ^^
+        ██>
+        ██>
+        ██>     :D
 ████████████████████████████████
 [player] x: 64, y: 112, rem:{0.0000, 0.0000}, spd:{5.0000, 0.0000}
 [player] x: 64, y: 112, rem:{0.0000, 0.0000}, spd:{5.0000, 0.0000}
@@ -103,7 +103,7 @@ int main(){
 ```
 
 # Searcheline
-An iterative-deepening depth-first-search solver for Celeste Classic, built on Cppleste. 
+An iterative-deepening depth-first-search solver for Celeste Classic, built on Cppleste.
 based on Pyleste's Searcheline
 
 ## Usage
@@ -111,21 +111,27 @@ To define and run a search problem:
 
 1. Create a class which inherits from `Searcheline<Cart>` (the default cart is celeste)
 2. Override the following methods as needed:
-    - `objlist& init_state()` **[REQUIRED]**
+    - `init_state()` **[REQUIRED]**
       - Initial state (list of game objects) to search from
-      - e.g., load the room and place maddy in Searcheline's game instance (`this->p8.game()`), return `this->p8.game.objects()`
-    - `std::vector<int> allowable_actions(const objlist &objs, typename Cart::player &player, bool h_movement, bool can_jump, bool can_dash)`
+      - e.g., load the room and place maddy in Searcheline's game instance (`this->p8.game()`).
+    - `std::vector<int> allowable_actions(const State &state, typename Cart::player &player, bool h_movement, bool can_jump, bool can_dash)`
       - Get list of available inputs for a state, with the following checks already computed:
         - `h_movement`: `True` if horizontal movement/jumps available (player x speed <= 1)
         - `can_jump`: `True` if jump available (in grace frames, next to wall, didn't jump previous frame)
         - `can_dash`: `True` if dash available (dashes > 0)
       - **Default**: all actions
       - Override this to restrict inputs (e.g., only up-dashes, no directional movement when player's y < 50, etc.)
-    - `double h_cost(const objlist& objs)`
+      - State contains the following variables:
+        - objects - the list of objects
+        - got_fruit - whether the player has gotten a berry
+        - has_dashed - whether the player has dashed
+        - has_key - whether the player has grabbed a key
+        - max_djump - the number of dashes the player gets on ground
+    - `double h_cost(const State& state)`
       - Estimated number of steps to satisfy the goal condition
       - **Default**: infinity if `is_rip`, `exit_heuristic` otherwise (See below)
       - Override to change or include additional heuristics
-      - `bool is_rip(const objlist& objs)`
+      - `bool is_rip(const State& state)`
         - RIP conditions (situations not worth considering further)
         - **Default**: player dies
         - Override to change or include other rip conditions (e.g., don't consider cases where player's x > 64, etc.)
@@ -133,7 +139,7 @@ To define and run a search problem:
         - Underestimated number of steps to exit off the top
         - **Default**: assumes player zips upward at a speed of 6 px/step
         - Override to specify a less conservative estimate (e.g., if exit will be off a jump, can use 3 px/step)
-    - `bool is_goal(const objlist& objs)`
+    - `bool is_goal(const State& state)`
       - Define goal conditions
       - **Default**: exited the level
       - Override to change goal conditions (e.g., reach certain coordinates with a dash available)
@@ -585,6 +591,29 @@ It manages to find several 45 frame solutions, which are 66 frame solutions when
 
 Comparing the performance of Pyleste to Cppleste on this search, we get a significant improvement: this search runs in ~1000 seconds on Pyleste, whereas Cppleste compiled with optimizations runs it in just below 6 seconds, giving a x167 improvement. While not all searches will get a speedup as large, it's safe to say Cppleste is much faster than Pyleste
 
+# Threaded Searcheline
+As the name suggest, this allows solving Searcheline problems while utilizing multiple threads, which can give significant performance increase
+
+The Usage is very similar to normal Searcheline:
+The template is as follows:
+
+```c++
+class Search: public SearchelineWorker<Cart>{
+    template <typename, typename> friend class ThreadedSearcheline;
+
+    using SearchelineWorker<Cart>::SearchelineWorker;
+
+    //your Searcheline function overloads here
+}
+
+...
+
+ThreadedSearcheline<Search,Cart> s(num_of_threads);
+s.search(depth);
+```
+Cart can be omitted if you want to use the standard celeste cart
+For more info, see ExampleThreadedSearcheline.cpp
+
 # Running Cppleste
 
 While you can just compile every script using Cppleste that you write with all of the Cppleste files, it is recommended to use Cppleste as a statically linked library, both for ease of use and better compile times.
@@ -595,14 +624,14 @@ now run the following commands in that directory:
 ```
 cmake ../
 cmake --build .
-``` 
+```
 This will create a file called libCppleste.a which is the statically linked library.
 now to compile a file using the Cppleste library (say cpplesteTest.cpp) simply put it, libCppleste.a and all of the header files in the same folder, and run
 ```
-g++ -std=c++17 libCppleste.a cpplesteTest.cpp -o outputName
+g++ -std=c++20 libCppleste.a cpplesteTest.cpp -o outputName
 ```
 It is also recommended you add the -O3 flag for files where performance is important.
 
-# Thanks 
+# Thanks
 
-thanks to meep for originally making Pyleste, helping with understanding the code and implementation details, and allowing me to shamelessly steal his examples.
+Thanks to meep for originally making Pyleste, helping with understanding the code and implementation details, and allowing me to shamelessly steal his examples.
