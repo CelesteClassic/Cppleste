@@ -64,8 +64,28 @@ namespace utils {
     template<typename Cart>
     void skip_player_spawn(PICO8<Cart> &p8) {
         typename Cart::base_obj *p;
-        while (!(p=p8.game().get_player()) || p->type_id != Cart::player::type_enum) {
+        while (true) {
+            p=p8.game().get_player();
+            if(p && p->type_id==Cart::player::type_enum){
+                return;
+            }
+            else if(p && p->type_id==Cart::player_spawn::type_enum){
+                auto q=static_cast<typename Cart::player_spawn*>(p);
+                if (q->state==2 && q->delay<=0){
+                    q->update();
+                    //clear the destroyed player spawn obj
+                    for (auto it=p8.game().objects.begin(); it!=p8.game().objects.end();){
+                        if(*it==nullptr){
+                           it=p8.game().objects.erase(it);
+                        }
+                        else{
+                            it++;
+                        }
+                    }
 
+                    return;
+                }
+            }
             p8.step();
         }
     }
