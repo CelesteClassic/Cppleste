@@ -199,6 +199,7 @@ struct Celeste{
     int frames;
     bool next_rm;
     bool loop_mode;
+    bool got_fruit;
     const static int k_left=0;
     const static int k_right=1;
     const static int k_up=2;

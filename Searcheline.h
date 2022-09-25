@@ -24,14 +24,15 @@ protected:
     PICO8<Cart> p8;
     std::vector<std::vector<int>> solutions;
 public:
+    struct State;
     explicit Searcheline() {
         utils::enable_loop_mode(p8);
     };
 
-    virtual objlist& init_state() = 0;
+    virtual void init_state() = 0;
 
     virtual std::vector<int>
-    allowable_actions(const objlist &objs, typename Cart::player &player, bool h_movement, bool can_jump,
+    allowable_actions(const State &state, typename Cart::player &player, bool h_movement, bool can_jump,
                       bool can_dash) {
         std::vector<int> actions{0b000000};
         if (h_movement) {
@@ -50,17 +51,17 @@ public:
         return actions;
     }
 
-    virtual double h_cost(const objlist &objs) {
-        if (is_rip(objs)) {
+    virtual double h_cost(const State &state) {
+        if (is_rip(state)) {
             return HUGE_VAL;
         }
         else {
-            return exit_heuristic(*find_player(objs));
+            return exit_heuristic(*find_player(state.objects));
         }
     }
 
-    virtual bool is_rip(const objlist &objs) {
-        return find_player(objs) == nullptr;
+    virtual bool is_rip(const State &state) {
+        return find_player(state.objects) == nullptr;
     }
 
     virtual int exit_heuristic(const typename Cart::player &player) {
@@ -68,12 +69,12 @@ public:
         return ceil((player.y + 4) / exit_spd_y);
     }
 
-    virtual bool is_goal(const objlist &objs) {
-        return find_player_spawn(objs) != nullptr;
+    virtual bool is_goal(const State &state) {
+        return find_player_spawn(state.objects) != nullptr;
     }
 
-    virtual std::vector<int> get_actions(const objlist &objs) {
-        typename Cart::player *p = find_player(objs);
+    virtual std::vector<int> get_actions(const State& state) {
+        typename Cart::player *p = find_player(state.objects);
         if (p == nullptr) {
             return {};
         }
@@ -81,8 +82,8 @@ public:
             return {0b0000000};
         }
         bool h_movement, can_jump, can_dash;
-        std::tie(h_movement, can_jump, can_dash) = action_restrictions(objs, *p);
-        return allowable_actions(objs, *p, h_movement, can_jump, can_dash);
+        std::tie(h_movement, can_jump, can_dash) = action_restrictions(state, *p);
+        return allowable_actions(state, *p, h_movement, can_jump, can_dash);
 
     }
 
@@ -93,18 +94,54 @@ public:
         }
         return cp;
     }
-
-    std::tuple<const objlist &, int> transition(const objlist &objs, int a) {
-        p8.game().objects = deepcopy(objs);
-        p8.set_btn_state(a);
-        p8.step();
-        int freeze = p8.game().freeze;
-        p8.game().freeze = 0;
-        p8.game().delay_restart = 0;
-        return std::forward_as_tuple(p8.game().objects, freeze);
+    struct State{
+        int max_djump;
+        bool has_dashed;
+        bool has_key;
+        bool got_fruit;
+        objlist objects;
+        explicit State(PICO8<Cart> &p8){
+            max_djump=p8.game().max_djump;
+            has_dashed=p8.game().has_dashed;
+            has_key=p8.game().has_key;
+            got_fruit=p8.game().got_fruit;
+            objects=deepcopy(p8.game().objects);
+        }
+        State() = default;
+        State copy(){
+            //the copy constructor should be implicitely deleted
+            //but for some reason it's not
+            //or at least, explicitly deleting it calls errors
+            //and it's called in some places in the code (????)
+            //so instead of overloading it i'll hope for the best and use this hack for now
+            State other;
+            other.max_djump=max_djump;
+            other.has_dashed=has_dashed;
+            other.has_key=has_key;
+            other.got_fruit=got_fruit;
+            other.objects=deepcopy(objects);
+            return other;
+        }
+    };
+    void load_state(const State& state){
+        p8.game().max_djump=state.max_djump;
+        p8.game().has_dashed=state.has_dashed;
+        p8.game().has_key=state.has_key;
+        p8.game().got_fruit=state.got_fruit;
+        p8.game().objects=deepcopy(state.objects);
     }
 
-    bool iddfs(const objlist &state, int depth, std::vector<int> &inputs) {
+    std::tuple<State, int> transition(const State &state, int a) {
+        load_state(state);
+        p8.set_btn_state(a);
+        p8.step();
+        int freeze=p8.game().freeze;
+        p8.game().freeze = 0;
+        p8.game().delay_restart = 0;
+        return std::make_tuple(State(p8),freeze);
+    }
+
+    bool iddfs(const State &state, int depth, std::vector<int> &inputs) {
         //std::cout<<"in";
         if (depth == 0 && is_goal(state)) {
             solutions.push_back(inputs);
@@ -118,17 +155,11 @@ public:
         }
 
         else {
-//            std::cout<<"  inputs: ";
-//            for(auto i: inputs){
-//                std::cout<<i<<", ";
-//            }
-//            std::cout<<std::endl;
             bool optimal_depth = false;
             if (depth > 0 && h_cost(state) <= depth) {
                 for (auto a:get_actions(state)) {
-                    std::tuple<const objlist &, int> trans = transition(state, a);
-                    objlist new_state = deepcopy(std::get<0>(trans));
-                    int freeze = std::get<1>(trans);
+
+                    auto [new_state, freeze] = transition(state, a);
                     // change: uses current array instead of allocating a new one
                     // should be better performance wise, will probably check
                     inputs.push_back(a);
@@ -147,7 +178,6 @@ public:
                     inputs.pop_back();
                 }
             }
-            //std::cout<<count<<std::endl;
             return optimal_depth;
         }
     }
@@ -155,7 +185,9 @@ public:
     std::vector<std::vector<int>> search(int max_depth, bool complete = false) {
         solutions = std::vector<std::vector<int>>();
         auto t1 = std::chrono::high_resolution_clock::now();
-        objlist state = deepcopy(init_state());
+        init_state();
+        State state(p8);
+
         std::cout << "searching..." << std::endl;
         for (int depth = 0; depth <= max_depth; depth++) {
             std::cout << "depth " << depth << "..." << std::endl;
@@ -208,7 +240,7 @@ public:
         return std::make_pair(dx, dy);
     }
 
-    virtual std::tuple<bool, bool, bool> action_restrictions(const objlist &objs, typename Cart::player &player) {
+    virtual std::tuple<bool, bool, bool> action_restrictions(const State &state, typename Cart::player &player) {
         int dx, dy;
         std::tie(dx, dy) = compute_displacement(player);
         bool h_movement = std::abs(player.spd.x) <= 1;
