@@ -137,8 +137,16 @@ public:
         p8.step();
         int freeze=p8.game().freeze;
         p8.game().freeze = 0;
+
+        //skip pause_player frames
+        int pause=0;
+        while(p8.game().pause_player){
+            p8.step();
+            pause++;
+        }
+
         p8.game().delay_restart = 0;
-        return std::make_tuple(State(p8),freeze);
+        return std::make_tuple(State(p8),freeze+pause);
     }
 
     bool iddfs(const State &state, int depth, std::vector<int> &inputs) {
@@ -172,10 +180,11 @@ public:
                     }
 
 
-                    for (int i = 0; i < freeze; i++) {
-                        inputs.pop_back();
-                    }
-                    inputs.pop_back();
+                    // for (int i = 0; i < freeze; i++) {
+                    //     inputs.pop_back();
+                    // }
+                    // inputs.pop_back();
+                    inputs.resize(inputs.size()-freeze-1);
                 }
             }
             return optimal_depth;

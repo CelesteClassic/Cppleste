@@ -16,7 +16,7 @@
 #include "../PICO8.h"
 
 struct Celeste{
-    enum ObjType {BASE_OBJ=-1, PLAYER_SPAWN, PLAYER, BALLOON, PLATFORM, FRUIT, FLY_FRUIT, FAKE_WALL, SPRING, FALL_FLOOR, KEY, CHEST};
+    enum ObjType {BASE_OBJ=-1, PLAYER_SPAWN, PLAYER, BALLOON, PLATFORM, FRUIT, FLY_FRUIT, FAKE_WALL, SPRING, FALL_FLOOR, KEY, CHEST, BIG_CHEST, ORB};
     template<typename T>
     struct Pair {
         T x;
@@ -172,6 +172,26 @@ struct Celeste{
         void update() override;
         fall_floor* clone() const override;
     };
+
+    struct big_chest: public base_obj{
+        const static ObjType type_enum=BIG_CHEST;
+        int state;
+        int timer;
+        big_chest(PICO8<Celeste> &p8, Celeste &g, int x, int y, int tile=-1);
+        void init() override;
+        void draw() override;
+        big_chest* clone() const override;
+    };
+
+    struct orb: public base_obj{
+        const static ObjType type_enum=ORB;
+        orb(PICO8<Celeste> &p8, Celeste &g, int x, int y, int tile=-1);
+        void init() override;
+        void draw() override;
+        orb* clone() const override;
+    };
+
+
     static void break_spring(spring& s);
     static void break_fall_floor(fall_floor& s);
     struct key : public base_obj{
@@ -193,6 +213,7 @@ struct Celeste{
     std::list<std::unique_ptr<base_obj>> objects;
     int freeze;
     int delay_restart;
+    bool pause_player;
     int max_djump;
     bool has_dashed;
     bool has_key;

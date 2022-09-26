@@ -119,6 +119,7 @@ void Celeste::player_spawn::init() {
 }
 
 void Celeste::player_spawn::update() {
+
     if (state == 0) {
         if (y < target + 16) {
             state = 1;
@@ -174,6 +175,9 @@ void Celeste::player::init() {
 }
 
 void Celeste::player::update() {
+    if(g.get().pause_player){
+        return;
+    }
     int h_input = p8.get().btn(k_right) ? 1 : p8.get().btn(k_left) ? -1 : 0;
     bool kill=false;
     if (g.get().spikes_at(x + hitbox.x, y + hitbox.y, hitbox.w, hitbox.h, spd.x, spd.y) || y > 128) {
@@ -588,7 +592,65 @@ void Celeste::chest::update() {
 }
 
 Celeste::chest *Celeste::chest::clone() const {
-    return nullptr;
+    return new chest(*this);
+}
+
+Celeste::big_chest::big_chest(PICO8<Celeste> &p8, Celeste &g, int x, int y, int tile) : base_obj(p8, g, x, y, tile) {
+    ascii="╔╤";
+    type = "big chest";
+    type_id =BIG_CHEST;
+}
+void Celeste::big_chest::init(){
+    state=0;
+    hitbox.w=16;
+}
+void Celeste::big_chest::draw(){
+    if(state==0){
+        auto* hit=check<player>(0,8);
+        if(hit!=nullptr && hit->is_solid(0,1)){
+            g.get().pause_player=true;
+            hit->spd=Pair<double>(0,0);
+            state=1;
+            timer=60;
+        }
+    }
+    else if(state==1){
+        timer-=1;
+        if(timer<0){
+            state=2;
+            g.get().init_object<orb>(x+4, y+4);
+            g.get().pause_player=false;
+        }
+    }
+}
+
+Celeste::big_chest* Celeste::big_chest::clone() const{
+    return new big_chest(*this);
+}
+Celeste::orb::orb(PICO8<Celeste> &p8, Celeste &g, int x, int y, int tile) : base_obj(p8, g, x, y, tile) {
+    ascii="◖◗";
+    type = "orb";
+    type_id =ORB;
+}
+
+void Celeste::orb::init(){
+    spd.y=-4;
+    solids=false;
+}
+
+void Celeste::orb::draw(){
+    spd.y=g.get().appr(spd.y,0,0.5);
+    player* hit = check<player>(0,0);
+    if (spd.y==0 && hit !=nullptr){
+        g.get().freeze=10;
+        g.get().max_djump=2;
+        hit->djump=2;
+        g.get().destroy_object(this);
+    }
+}
+
+Celeste::orb* Celeste::orb::clone() const{
+    return new orb(*this);
 }
 
 
@@ -600,6 +662,9 @@ Celeste::Celeste(PICO8<Celeste> &p8) :
     max_djump = 1;
     next_rm = false;
     loop_mode = false;
+    pause_player=false;
+    got_fruit=false;
+    prev_got_fruit=false;
 }
 
 void Celeste::_init() {
@@ -662,6 +727,16 @@ void Celeste::_draw() {
     for (auto &o: objects) {
         o->draw();
     }
+
+    //clear objects destroyed in draw (because chest exists)
+    auto it = objects.begin();
+    while (it != objects.end()) {
+        auto nxt = next(it);
+        if (*it == nullptr) {
+            objects.erase(it);
+        }
+        it = nxt;
+    }
 }
 
 int Celeste::level_index() {
@@ -684,6 +759,7 @@ void Celeste::load_room(int x, int y) {
     has_dashed = false;
     has_key = false;
     got_fruit = false; // change: only single got_fruit stored, for the current level
+
     objects.clear();
     room.x = x;
     room.y = y;
@@ -721,6 +797,9 @@ void Celeste::load_room(int x, int y) {
                     break;
                 case 64:
                     init_object<fake_wall>(tx*8,ty*8,tile);
+                    break;
+                case 96:
+                    init_object<big_chest>(tx*8,ty*8,tile);
                     break;
 
             }
@@ -863,6 +942,11 @@ std::ostream &operator<<(std::ostream &os, Celeste &c) {
                 if (ox + 1 <= 15) map_str[pos + 1] = o->ascii;
                 if (oy + 1 <= 15) map_str[pos + 17] = o->ascii;
                 if (ox + 1 <= 15 && oy + 1 <= 15) map_str[pos + 18] = o->ascii;
+            }
+            else if(o&& o->type_id==Celeste::BIG_CHEST){
+                if (ox + 1 <= 15) map_str[pos + 1] = "╤╗";
+                if (oy + 1 <= 15) map_str[pos + 17] = "║ ";
+                if (ox + 1 <= 15 && oy + 1 <= 15) map_str[pos + 18] = " ║";
             }
         }
     }
