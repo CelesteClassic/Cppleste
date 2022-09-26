@@ -364,8 +364,8 @@ void Celeste::fruit::update() {
     auto* hit=check<player>(0,0);
     if(hit!=nullptr){
         hit->djump=g.get().max_djump;
-        g.get().destroy_object(this);
         g.get().got_fruit=true;
+        g.get().destroy_object(this);
     }
     else {
         off++;
@@ -407,8 +407,8 @@ void Celeste::fly_fruit::update() {
     auto* hit=check<player>(0,0);
     if(hit!= nullptr){
         hit->djump=g.get().max_djump;
-        g.get().destroy_object(this);
         g.get().got_fruit=true;
+        g.get().destroy_object(this);
     }
 }
 
@@ -758,7 +758,10 @@ void Celeste::next_room() {
 void Celeste::load_room(int x, int y) {
     has_dashed = false;
     has_key = false;
-    got_fruit = false; // change: only single got_fruit stored, for the current level
+
+    // change: only single got_fruit stored, for the current level and previous one
+    prev_got_fruit=got_fruit;
+    got_fruit = false;
 
     objects.clear();
     room.x = x;

@@ -104,7 +104,7 @@ public:
             max_djump=p8.game().max_djump;
             has_dashed=p8.game().has_dashed;
             has_key=p8.game().has_key;
-            got_fruit=p8.game().got_fruit;
+            got_fruit=p8.game().got_fruit | p8.game().prev_got_fruit; // continue being correct even if the level has cleared
             objects=deepcopy(p8.game().objects);
         }
         State() = default;
@@ -128,6 +128,7 @@ public:
         p8.game().has_dashed=state.has_dashed;
         p8.game().has_key=state.has_key;
         p8.game().got_fruit=state.got_fruit;
+        p8.game().prev_got_fruit=false; //assume we don't care about loading states after level transitions
         p8.game().objects=deepcopy(state.objects);
     }
 
